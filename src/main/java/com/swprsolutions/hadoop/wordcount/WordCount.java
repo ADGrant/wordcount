@@ -55,6 +55,7 @@ public class WordCount
 
         job.setMapperClass(Map.class);
         job.setReducerClass(Reduce.class);
+        job.setCombinerClass(Reduce.class);
 
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
