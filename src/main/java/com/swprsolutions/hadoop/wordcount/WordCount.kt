@@ -1,68 +1,64 @@
-package com.swprsolutions.hadoop.wordcount;
+package com.swprsolutions.hadoop.wordcount
 
-import java.io.IOException;
-import java.util.*;
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.io.IntWritable
+import org.apache.hadoop.io.LongWritable
+import org.apache.hadoop.io.Text
+import org.apache.hadoop.mapreduce.Job
+import org.apache.hadoop.mapreduce.Mapper
+import org.apache.hadoop.mapreduce.Reducer
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat
+import java.io.IOException
+import java.util.*
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+object WordCount {
+    @Throws(Exception::class)
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val conf = Configuration()
+        val job = Job(conf, "wordcount")
+        job.setJarByClass(WordCount::class.java)
+        job.outputKeyClass = Text::class.java
+        job.outputValueClass = IntWritable::class.java
+        job.mapperClass = Map::class.java
+        job.reducerClass = Reduce::class.java
+        job.combinerClass = Reduce::class.java
+        job.inputFormatClass = TextInputFormat::class.java
+        job.outputFormatClass = TextOutputFormat::class.java
+        FileInputFormat.addInputPath(job, Path(args[0]))
+        FileOutputFormat.setOutputPath(job, Path(args[1]))
+        job.waitForCompletion(true)
+    }
 
-public class WordCount
-{
-    public static class Map extends Mapper<LongWritable, Text, Text, IntWritable>
-    {
-        private final static IntWritable one = new IntWritable(1);
-        private Text word = new Text();
-
-        public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-            String line = value.toString();
-            StringTokenizer tokenizer = new StringTokenizer(line);
+    class Map : Mapper<LongWritable?, Text, Text?, IntWritable?>() {
+        private val word = Text()
+        @Throws(IOException::class, InterruptedException::class)
+        public override fun map(key: LongWritable?, value: Text, context: Context) {
+            val line = value.toString()
+            val tokenizer = StringTokenizer(line)
             while (tokenizer.hasMoreTokens()) {
-                word.set(tokenizer.nextToken());
-                context.write(word, one);
+                word.set(tokenizer.nextToken())
+                context.write(word, one)
             }
+        }
+
+        companion object {
+            private val one = IntWritable(1)
         }
     }
 
-    public static class Reduce extends Reducer<Text, IntWritable, Text, IntWritable>
-    {
-        public void reduce(Text key, Iterable<IntWritable> values, Context context)
-                throws IOException, InterruptedException
-        {
-            int sum = 0;
-            for (IntWritable val : values)
-            {
-                sum += val.get();
+    class Reduce : Reducer<Text?, IntWritable, Text?, IntWritable?>() {
+        @Throws(IOException::class, InterruptedException::class)
+        public override fun reduce(key: Text?, values: Iterable<IntWritable>, context: Context) {
+            var sum = 0
+            for (`val` in values) {
+                sum += `val`.get()
             }
-            context.write(key, new IntWritable(sum));
+            context.write(key, IntWritable(sum))
         }
-    }
-
-    public static void main(String[] args) throws Exception
-    {
-        Configuration conf = new Configuration();
-
-        Job job = new Job(conf, "wordcount");
-
-        job.setJarByClass(WordCount.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
-
-        job.setMapperClass(Map.class);
-        job.setReducerClass(Reduce.class);
-        job.setCombinerClass(Reduce.class);
-
-        job.setInputFormatClass(TextInputFormat.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
-
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-        job.waitForCompletion(true);
     }
 }
